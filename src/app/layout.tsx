@@ -23,7 +23,16 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'NTMDB',
-  description: 'A modern movie discovery application built with Next.js, featuring real-time movie data from The Movie Database (TMDB).'
+  description: 'A modern movie discovery application built with Next.js, featuring real-time movie data from The Movie Database (TMDB).',
+  openGraph: {
+    title: 'NTMDB',
+    description: 'A modern movie discovery application built with Next.js, featuring real-time movie data from The Movie Database (TMDB).',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'NTMDB',
+    description: 'A modern movie discovery application built with Next.js, featuring real-time movie data from The Movie Database (TMDB).',
+  },
 }
 
 export default function RootLayout({
