@@ -1,6 +1,9 @@
+'use server';
+
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { TMDB } from 'tmdb-ts';
+import type { Movie } from '@/lib/types';
 
 let tmdb: TMDB | null = null;
 
@@ -15,13 +18,51 @@ function getTMDBClient(): TMDB {
   return tmdb;
 }
 
-// Cache popular movies for 1 hour (3600 seconds)
-// Using unstable_cache for persistent caching across requests
+const mapTmdbResultToMovie = (item: { id: number; title: string; overview?: string; poster_path?: string | null; release_date: string; vote_average: number; vote_count?: number }): Movie => ({
+  id: item.id,
+  title: item.title,
+  overview: item.overview ?? '',
+  poster_path: item.poster_path ?? null,
+  release_date: item.release_date,
+  vote_average: item.vote_average,
+  vote_count: item.vote_count,
+});
+
+export type PopularMoviesPageResult = {
+  results: Movie[];
+  page: number;
+  total_pages: number;
+};
+
+// Cached fetcher per page (cache key includes page argument)
+const getPopularMoviesPageCached = unstable_cache(
+  async (page: number): Promise<PopularMoviesPageResult> => {
+    const tmdb = getTMDBClient();
+    const response = await tmdb.trending.trending('movie', 'week', { page });
+    const results = response.results.map(mapTmdbResultToMovie);
+    return {
+      results,
+      page: response.page,
+      total_pages: response.total_pages,
+    };
+  },
+  ['popular-movies-page'],
+  {
+    revalidate: 3600,
+    tags: ['movies', 'popular'],
+  }
+);
+
+// Fetch a single page of popular (trending) movies for infinite scroll
+export async function getPopularMoviesPage(page: number): Promise<PopularMoviesPageResult> {
+  return getPopularMoviesPageCached(page);
+}
+
+// Cache popular movies page 1 for 1 hour (used by home server component)
 export const getPopularMovies = unstable_cache(
   async () => {
-    const tmdb = getTMDBClient();
-    const response = await tmdb.trending.trending('movie', 'week');
-    return response.results.slice(0, 20);
+    const data = await getPopularMoviesPageCached(1);
+    return data.results;
   },
   ['popular-movies'],
   {

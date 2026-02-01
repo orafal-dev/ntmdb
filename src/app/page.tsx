@@ -1,8 +1,13 @@
-import { getPopularMovies } from '@/lib/server-actions';
+import { getPopularMoviesPage } from '@/lib/server-actions';
 import AnimatedHome from '@/components/AnimatedHome';
 
 export default async function Home() {
-  const movies = await getPopularMovies();
+  const { results, total_pages } = await getPopularMoviesPage(1);
 
-  return <AnimatedHome movies={movies} />;
+  return (
+    <AnimatedHome
+      initialMovies={results}
+      totalPages={total_pages}
+    />
+  );
 }

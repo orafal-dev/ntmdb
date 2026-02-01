@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useCallback, useEffect, useRef } from 'react';
 import MoviesList from '@/components/MoviesList';
 import ThemeToggle from '@/components/ThemeToggle';
 import NewsletterForm from '@/components/NewsletterForm';
@@ -9,12 +10,62 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Heart } from 'lucide-react';
 import { Movie } from '@/lib/types';
+import { getPopularMoviesPage } from '@/lib/server-actions';
+import { Spinner } from '@/components/ui/spinner';
 
 interface AnimatedHomeProps {
-  movies: Movie[];
+  initialMovies: Movie[];
+  totalPages: number;
 }
 
-const AnimatedHome = ({ movies }: AnimatedHomeProps) => {
+const AnimatedHome = ({ initialMovies, totalPages }: AnimatedHomeProps) => {
+  const [movies, setMovies] = useState<Movie[]>(initialMovies);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const hasMore = currentPage < totalPages;
+
+  const loadMore = useCallback(async () => {
+    if (!hasMore || isLoadingMore) return;
+
+    setIsLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const { results } = await getPopularMoviesPage(nextPage);
+      setMovies((prev) => [...prev, ...results]);
+      setCurrentPage(nextPage);
+    } catch (error) {
+      console.error('Error loading more movies:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [currentPage, hasMore, isLoadingMore]);
+
+  useEffect(() => {
+    if (!hasMore) return;
+
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry?.isIntersecting && hasMore && !isLoadingMore) {
+          loadMore();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '400px 0px 0px 0px',
+        threshold: 0,
+      }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, isLoadingMore, loadMore]);
+
   return (
     <motion.div
       key="home"
@@ -108,6 +159,15 @@ const AnimatedHome = ({ movies }: AnimatedHomeProps) => {
         </motion.div>
 
         <MoviesList movies={movies} />
+
+        {/* Infinite scroll sentinel: load more when this enters viewport */}
+        {hasMore && <div ref={sentinelRef} className="h-1 w-full" aria-hidden />}
+
+        {isLoadingMore && (
+          <div className="flex justify-center py-8" role="status" aria-label="Loading more movies">
+            <Spinner className="size-8 text-muted-foreground" />
+          </div>
+        )}
 
         {/* Newsletter Section */}
         <motion.div
