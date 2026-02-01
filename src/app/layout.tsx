@@ -3,6 +3,7 @@ import { ThemeProvider } from "next-themes";
 import { RouterCacheProvider } from "@/components/RouterCacheProvider";
 import { Suspense } from "react";
 import "./globals.css";
+import type { Metadata } from "next";
 
 export const viewport = {
   width: 'device-width',
@@ -19,6 +20,11 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+export const metadata: Metadata = {
+  title: 'NTMDB',
+  description: 'A modern movie discovery application built with Next.js, featuring real-time movie data from The Movie Database (TMDB).'
+}
 
 export default function RootLayout({
   children,
