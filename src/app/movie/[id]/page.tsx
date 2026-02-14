@@ -56,5 +56,12 @@ export default async function MoviePage({ params }: PageProps) {
 
   const data = await getMovieWithCredits(movieId);
 
-  return <MovieDetail movie={data.movie as MovieDetails} credits={data.credits} watchProviders={data.watchProviders} />;
+  return (
+    <MovieDetail
+      movie={data.movie as MovieDetails}
+      credits={data.credits}
+      watchProviders={data.watchProviders}
+      videos={data.videos}
+    />
+  );
 }

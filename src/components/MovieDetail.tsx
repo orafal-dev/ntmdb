@@ -2,16 +2,18 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Star, Calendar, Clock, Heart } from 'lucide-react';
+import { ArrowLeft, Star, Calendar, Clock, Heart, PlayCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useFavorites } from '@/hooks/use-favorites';
 import type { WatchProviders } from 'tmdb-ts';
+import type { Video, Videos } from 'tmdb-ts';
+import { MovieTrailerPlayer } from '@/components/kibo-ui/video-player/MovieTrailerPlayer';
 
 interface MovieDetails {
   id: number;
@@ -46,11 +48,31 @@ interface MovieDetailProps {
   movie: MovieDetails;
   credits: CastMember[];
   watchProviders?: WatchProviders;
+  videos?: Videos;
 }
 
-const MovieDetail = ({ movie, credits, watchProviders }: MovieDetailProps) => {
+const MovieDetail = ({ movie, credits, watchProviders, videos }: MovieDetailProps) => {
   const { toggleFavorite, isFavorite } = useFavorites();
   const [selectedCountry, setSelectedCountry] = useState('US');
+
+  const youtubeTrailers = useMemo(() => {
+    if (!videos?.results?.length) return [];
+    return videos.results.filter(
+      (v) => v.site === 'YouTube' && v.type === 'Trailer'
+    );
+  }, [videos]);
+
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+
+  useEffect(() => {
+    if (youtubeTrailers.length > 0) {
+      setSelectedVideo((prev) =>
+        prev && youtubeTrailers.some((v) => v.id === prev.id)
+          ? prev
+          : youtubeTrailers[0]
+      );
+    }
+  }, [youtubeTrailers]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -590,6 +612,60 @@ const MovieDetail = ({ movie, credits, watchProviders }: MovieDetailProps) => {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Trailers */}
+          {youtubeTrailers.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 1.15 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PlayCircle className="h-5 w-5" aria-hidden />
+                    Trailers
+                  </CardTitle>
+                  <CardDescription>
+                    Select a trailer to play.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    {youtubeTrailers.map((video) => (
+                      <Button
+                        key={video.id}
+                        type="button"
+                        variant={selectedVideo?.id === video.id ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedVideo(selectedVideo?.id === video.id ? null : video)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedVideo(selectedVideo?.id === video.id ? null : video);
+                          }
+                        }}
+                        aria-pressed={selectedVideo?.id === video.id}
+                        aria-label={`Play ${video.name}`}
+                      >
+                        {video.name.length > 50 ? `${video.name.slice(0, 50)}…` : video.name}
+                      </Button>
+                    ))}
+                  </div>
+                  {(selectedVideo ?? youtubeTrailers[0]) && (
+                    <div className="rounded-lg overflow-hidden border bg-muted/30">
+                      <MovieTrailerPlayer
+                        videoKey={(selectedVideo ?? youtubeTrailers[0]).key}
+                        title={(selectedVideo ?? youtubeTrailers[0]).name}
+                        hideTooltips
+                        hideYoutubeControls
+                      />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           {/* Watch Providers */}
           {watchProviders && (

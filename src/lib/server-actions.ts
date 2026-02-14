@@ -117,13 +117,28 @@ export const getMovieWatchProviders = unstable_cache(
   }
 );
 
+// Cache movie videos (trailers, teasers, etc.) for 24 hours
+export const getMovieVideos = unstable_cache(
+  async (movieId: number) => {
+    const tmdb = getTMDBClient();
+    const response = await tmdb.movies.videos(movieId);
+    return response;
+  },
+  ['movie-videos'],
+  {
+    revalidate: 86400, // 24 hours
+    tags: ['movies', 'videos']
+  }
+);
+
 // Request memoization for parallel requests within the same request
 export const getMovieWithCredits = cache(async (movieId: number) => {
-  const [movie, credits, watchProviders] = await Promise.all([
+  const [movie, credits, watchProviders, videos] = await Promise.all([
     getMovieDetails(movieId),
     getMovieCredits(movieId),
-    getMovieWatchProviders(movieId)
+    getMovieWatchProviders(movieId),
+    getMovieVideos(movieId)
   ]);
 
-  return { movie, credits, watchProviders };
+  return { movie, credits, watchProviders, videos };
 });
