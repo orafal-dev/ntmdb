@@ -3,7 +3,7 @@
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { TMDB } from 'tmdb-ts';
-import type { Movie } from '@/lib/types';
+import type { Movie, TvShow } from '@/lib/types';
 
 let tmdb: TMDB | null = null;
 
@@ -141,4 +141,128 @@ export const getMovieWithCredits = cache(async (movieId: number) => {
   ]);
 
   return { movie, credits, watchProviders, videos };
+});
+
+// --- TV Shows ---
+
+const mapTmdbTvResultToTvShow = (item: {
+  id: number;
+  name: string;
+  overview?: string;
+  poster_path?: string | null;
+  first_air_date: string;
+  vote_average: number;
+  vote_count?: number;
+}): TvShow => ({
+  id: item.id,
+  name: item.name,
+  overview: item.overview ?? '',
+  poster_path: item.poster_path ?? null,
+  first_air_date: item.first_air_date,
+  vote_average: item.vote_average,
+  vote_count: item.vote_count,
+});
+
+export type PopularTvShowsPageResult = {
+  results: TvShow[];
+  page: number;
+  total_pages: number;
+};
+
+const getPopularTvShowsPageCached = unstable_cache(
+  async (page: number): Promise<PopularTvShowsPageResult> => {
+    const tmdb = getTMDBClient();
+    const response = await tmdb.tvShows.popular({ page });
+    const results = (response.results ?? []).map(mapTmdbTvResultToTvShow);
+    return {
+      results,
+      page: response.page,
+      total_pages: response.total_pages,
+    };
+  },
+  ['popular-tv-shows-page'],
+  {
+    revalidate: 3600,
+    tags: ['tv', 'popular'],
+  }
+);
+
+export async function getPopularTvShowsPage(page: number): Promise<PopularTvShowsPageResult> {
+  return getPopularTvShowsPageCached(page);
+}
+
+export const getTvShowDetails = unstable_cache(
+  async (seriesId: number) => {
+    const tmdb = getTMDBClient();
+    const response = await tmdb.tvShows.details(seriesId);
+    return response;
+  },
+  ['tv-show-details'],
+  {
+    revalidate: 86400,
+    tags: ['tv', 'details'],
+  }
+);
+
+export const getTvShowCredits = unstable_cache(
+  async (seriesId: number) => {
+    const tmdb = getTMDBClient();
+    const response = await tmdb.tvShows.credits(seriesId);
+    if (!response?.cast || !Array.isArray(response.cast)) return [];
+    return response.cast.slice(0, 10);
+  },
+  ['tv-show-credits'],
+  {
+    revalidate: 86400,
+    tags: ['tv', 'credits'],
+  }
+);
+
+export const getTvShowWatchProviders = unstable_cache(
+  async (seriesId: number) => {
+    const tmdb = getTMDBClient();
+    const response = await tmdb.tvShows.watchProviders(seriesId);
+    return response;
+  },
+  ['tv-show-watch-providers'],
+  {
+    revalidate: 86400,
+    tags: ['tv', 'watch-providers'],
+  }
+);
+
+export const getTvShowVideos = unstable_cache(
+  async (seriesId: number) => {
+    const tmdb = getTMDBClient();
+    const response = await tmdb.tvShows.videos(seriesId);
+    return response;
+  },
+  ['tv-show-videos'],
+  {
+    revalidate: 86400,
+    tags: ['tv', 'videos'],
+  }
+);
+
+export const getTvSeasonDetails = unstable_cache(
+  async (seriesId: number, seasonNumber: number) => {
+    const tmdb = getTMDBClient();
+    const response = await tmdb.tvShows.season(seriesId, seasonNumber);
+    return response;
+  },
+  ['tv-season-details'],
+  {
+    revalidate: 86400,
+    tags: ['tv', 'seasons'],
+  }
+);
+
+export const getTvShowWithCredits = cache(async (seriesId: number) => {
+  const [show, credits, watchProviders, videos] = await Promise.all([
+    getTvShowDetails(seriesId),
+    getTvShowCredits(seriesId),
+    getTvShowWatchProviders(seriesId),
+    getTvShowVideos(seriesId),
+  ]);
+  return { show, credits, watchProviders, videos };
 });

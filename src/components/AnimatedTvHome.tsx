@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import MoviesList from '@/components/MoviesList';
+import TvShowsList from '@/components/TvShowsList';
 import ThemeToggle from '@/components/ThemeToggle';
 import NewsletterForm from '@/components/NewsletterForm';
 import AppNav from '@/components/AppNav';
@@ -10,17 +10,17 @@ import { HyperText } from './ui/hyper-text';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Heart } from 'lucide-react';
-import { Movie } from '@/lib/types';
-import { getPopularMoviesPage } from '@/lib/server-actions';
+import { TvShow } from '@/lib/types';
+import { getPopularTvShowsPage } from '@/lib/server-actions';
 import { Spinner } from '@/components/ui/spinner';
 
-interface AnimatedHomeProps {
-  initialMovies: Movie[];
+interface AnimatedTvHomeProps {
+  initialTvShows: TvShow[];
   totalPages: number;
 }
 
-const AnimatedHome = ({ initialMovies, totalPages }: AnimatedHomeProps) => {
-  const [movies, setMovies] = useState<Movie[]>(initialMovies);
+const AnimatedTvHome = ({ initialTvShows, totalPages }: AnimatedTvHomeProps) => {
+  const [tvShows, setTvShows] = useState<TvShow[]>(initialTvShows);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -33,11 +33,11 @@ const AnimatedHome = ({ initialMovies, totalPages }: AnimatedHomeProps) => {
     setIsLoadingMore(true);
     try {
       const nextPage = currentPage + 1;
-      const { results } = await getPopularMoviesPage(nextPage);
-      setMovies((prev) => [...prev, ...results]);
+      const { results } = await getPopularTvShowsPage(nextPage);
+      setTvShows((prev) => [...prev, ...results]);
       setCurrentPage(nextPage);
     } catch (error) {
-      console.error('Error loading more movies:', error);
+      console.error('Error loading more TV shows:', error);
     } finally {
       setIsLoadingMore(false);
     }
@@ -69,19 +69,18 @@ const AnimatedHome = ({ initialMovies, totalPages }: AnimatedHomeProps) => {
 
   return (
     <motion.div
-      key="home"
+      key="tv-home"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
       className="min-h-screen bg-background"
     >
-      {/* Header */}
       <motion.header
         className="border-b"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -92,9 +91,9 @@ const AnimatedHome = ({ initialMovies, totalPages }: AnimatedHomeProps) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
               >
-                <HyperText duration={1200}>
-                  N.T.M.D.B.
-                </HyperText>
+                <Link href="/">
+                  <HyperText duration={1200}>N.T.M.D.B.</HyperText>
+                </Link>
               </motion.h1>
               <div className="flex items-center gap-2 sm:hidden shrink-0">
                 <AppNav />
@@ -121,7 +120,6 @@ const AnimatedHome = ({ initialMovies, totalPages }: AnimatedHomeProps) => {
         </div>
       </motion.header>
 
-      {/* Main Content */}
       <motion.main
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
         initial={{ opacity: 0 }}
@@ -140,7 +138,7 @@ const AnimatedHome = ({ initialMovies, totalPages }: AnimatedHomeProps) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.8 }}
           >
-            Popular Movies
+            Popular TV Shows
           </motion.h2>
           <motion.p
             className="text-muted-foreground"
@@ -148,22 +146,20 @@ const AnimatedHome = ({ initialMovies, totalPages }: AnimatedHomeProps) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 1.0 }}
           >
-            Click on any movie to view detailed information, cast, and ratings.
+            Click on any show to view details, seasons, episodes, and cast.
           </motion.p>
         </motion.div>
 
-        <MoviesList movies={movies} />
+        <TvShowsList tvShows={tvShows} />
 
-        {/* Infinite scroll sentinel: load more when this enters viewport */}
         {hasMore && <div ref={sentinelRef} className="h-1 w-full" aria-hidden />}
 
         {isLoadingMore && (
-          <div className="flex justify-center py-8" role="status" aria-label="Loading more movies">
+          <div className="flex justify-center py-8" role="status" aria-label="Loading more TV shows">
             <Spinner className="size-8 text-muted-foreground" />
           </div>
         )}
 
-        {/* Newsletter Section */}
         <motion.div
           className="mt-16 mb-8"
           initial={{ opacity: 0, y: 30 }}
@@ -179,4 +175,4 @@ const AnimatedHome = ({ initialMovies, totalPages }: AnimatedHomeProps) => {
   );
 };
 
-export default AnimatedHome;
+export default AnimatedTvHome;
