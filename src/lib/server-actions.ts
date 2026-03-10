@@ -145,6 +145,10 @@ export const getMovieWithCredits = cache(async (movieId: number) => {
 
 // --- TV Shows ---
 
+/** TMDB TV genre IDs to exclude from trending list (animation/anime, kids, reality, talk, etc.) */
+const TV_EXCLUDED_GENRE_IDS = [16, 10762, 10764, 10767] as const;
+// 16 = Animation (anime), 10762 = Kids, 10764 = Reality, 10767 = Talk
+
 const mapTmdbTvResultToTvShow = (item: {
   id: number;
   name: string;
@@ -163,6 +167,12 @@ const mapTmdbTvResultToTvShow = (item: {
   vote_count: item.vote_count,
 });
 
+const filterOutExcludedTvGenres = <T extends { genre_ids?: number[] }>(items: T[]): T[] =>
+  items.filter(
+    (item) =>
+      !item.genre_ids?.some((id) => (TV_EXCLUDED_GENRE_IDS as readonly number[]).includes(id))
+  );
+
 export type PopularTvShowsPageResult = {
   results: TvShow[];
   page: number;
@@ -173,7 +183,9 @@ const getPopularTvShowsPageCached = unstable_cache(
   async (page: number): Promise<PopularTvShowsPageResult> => {
     const tmdb = getTMDBClient();
     const response = await tmdb.trending.trending('tv', 'week', { page });
-    const results = (response.results ?? []).map(mapTmdbTvResultToTvShow);
+    const rawResults = response.results ?? [];
+    const filtered = filterOutExcludedTvGenres(rawResults);
+    const results = filtered.map(mapTmdbTvResultToTvShow);
     return {
       results,
       page: response.page,
