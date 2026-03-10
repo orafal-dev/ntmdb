@@ -172,7 +172,7 @@ export type PopularTvShowsPageResult = {
 const getPopularTvShowsPageCached = unstable_cache(
   async (page: number): Promise<PopularTvShowsPageResult> => {
     const tmdb = getTMDBClient();
-    const response = await tmdb.tvShows.popular({ page });
+    const response = await tmdb.trending.trending('tv', 'week', { page });
     const results = (response.results ?? []).map(mapTmdbTvResultToTvShow);
     return {
       results,
@@ -180,10 +180,10 @@ const getPopularTvShowsPageCached = unstable_cache(
       total_pages: response.total_pages,
     };
   },
-  ['popular-tv-shows-page'],
+  ['trending-tv-shows-page'],
   {
     revalidate: 3600,
-    tags: ['tv', 'popular'],
+    tags: ['tv', 'trending'],
   }
 );
 

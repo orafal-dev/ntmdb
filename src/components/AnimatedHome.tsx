@@ -24,21 +24,27 @@ const AnimatedHome = ({ initialMovies, totalPages }: AnimatedHomeProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const loadingMoreRef = useRef(false);
 
   const hasMore = currentPage < totalPages;
 
   const loadMore = useCallback(async () => {
-    if (!hasMore || isLoadingMore) return;
-
+    if (!hasMore || isLoadingMore || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
     setIsLoadingMore(true);
     try {
       const nextPage = currentPage + 1;
       const { results } = await getPopularMoviesPage(nextPage);
-      setMovies((prev) => [...prev, ...results]);
+      setMovies((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        const newMovies = results.filter((m) => !existingIds.has(m.id));
+        return newMovies.length > 0 ? [...prev, ...newMovies] : prev;
+      });
       setCurrentPage(nextPage);
     } catch (error) {
       console.error('Error loading more movies:', error);
     } finally {
+      loadingMoreRef.current = false;
       setIsLoadingMore(false);
     }
   }, [currentPage, hasMore, isLoadingMore]);
@@ -52,7 +58,7 @@ const AnimatedHome = ({ initialMovies, totalPages }: AnimatedHomeProps) => {
     const observer = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
-        if (entry?.isIntersecting && hasMore && !isLoadingMore) {
+        if (entry?.isIntersecting && hasMore && !loadingMoreRef.current) {
           loadMore();
         }
       },
@@ -140,7 +146,7 @@ const AnimatedHome = ({ initialMovies, totalPages }: AnimatedHomeProps) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.8 }}
           >
-            Popular Movies
+            Trending Movies
           </motion.h2>
           <motion.p
             className="text-muted-foreground"
