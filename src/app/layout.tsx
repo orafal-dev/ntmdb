@@ -1,6 +1,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { RouterCacheProvider } from "@/components/RouterCacheProvider";
+import { ToastProvider } from "@/components/ui/toast";
+import { VersionUpdater } from "@/components/VersionUpdater";
 import { Suspense } from "react";
 import "./globals.css";
 import type { Metadata } from "next";
@@ -51,11 +53,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Suspense fallback={null}>
-            <RouterCacheProvider>
-              {children}
-            </RouterCacheProvider>
-          </Suspense>
+          <ToastProvider>
+            <VersionUpdater />
+            <Suspense fallback={null}>
+              <RouterCacheProvider>
+                {children}
+              </RouterCacheProvider>
+            </Suspense>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>
